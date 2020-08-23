@@ -1,16 +1,9 @@
 ﻿using dnlib.DotNet;
 using dnlib.DotNet.Emit;
 using System;
-using System.Diagnostics;
-using System.IO;
-using System.Reflection;
 
-using osu_common.Updater;
-
-using MethodAttributes = dnlib.DotNet.MethodAttributes;
 using OpCodes = dnlib.DotNet.Emit.OpCodes;
-using System.Runtime.Remoting.Messaging;
-using System.Reflection.Emit;
+
 
 namespace osu_patch
 {
@@ -43,6 +36,32 @@ namespace osu_patch
 					OpCodes.Call
 				});
 
+				var InitOption = exp["osu.GameModes.Options.Options"]["InitializeOptions"].Editor;
+				var InitOPLoc = InitOption.Locate(new[]{ 
+					OpCodes.Ldarg_0,
+					OpCodes.Call,
+					OpCodes.Newobj,
+					OpCodes.Call,
+					OpCodes.Ldarg_0,
+					OpCodes.Call,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldftn,
+					OpCodes.Newobj,
+					OpCodes.Call,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Ldfld,
+					OpCodes.Callvirt,
+					OpCodes.Ldc_I4_1,
+					OpCodes.Sub,
+					OpCodes.Stloc_S,
+					OpCodes.Br_S,
+					OpCodes.Ldarg_0
+				});
+					InitOption.ReplaceAt(InitOPLoc+1, Instruction.Create(OpCodes.Ldstr, "Modded by Aoba Suzukaze | Made for Ainu!"));
 				return patch.Result(PatchStatus.Success);
 			}),
 			new Patch("osu!.exe to ainu.exe", (patch, exp) =>
@@ -637,6 +656,79 @@ namespace osu_patch
 				});
 
 				return new PatchResult(patch, PatchStatus.Success);
+			}),
+			new Patch("No minimum delay before pausing again", (patch, exp) =>
+			{
+				// first 27 instructions
+				exp["osu.GameModes.Play.Player"]["togglePause"].Editor.LocateAndNop(new[]
+				{
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Call,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Brfalse_S,
+					OpCodes.Ldsfld,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Sub,
+					OpCodes.Ldc_I4,
+					OpCodes.Bge_S,
+					OpCodes.Ldc_I4,
+					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Ret
+				});
+
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
+			new Patch("DiscordRPC patch", (patch, exp) =>
+			{
+				var DiscordRPC = exp["osu.Online.DiscordStatusManager"].FindMethodRaw(".ctor",MethodSig.CreateInstance(exp.CorLibTypes.Void)).Editor;
+				var DiscordLoc = DiscordRPC.Locate(new[]{
+					OpCodes.Ldarg_0,
+					OpCodes.Newobj,
+					OpCodes.Dup,
+					OpCodes.Newobj,
+					OpCodes.Callvirt,
+					OpCodes.Dup,
+					OpCodes.Newobj,
+					OpCodes.Callvirt,
+					OpCodes.Stfld,
+					OpCodes.Ldarg_0,
+					OpCodes.Call,
+					OpCodes.Ldarg_0,
+					null,
+					null,
+					OpCodes.Newobj,
+					OpCodes.Stfld,
+				});
+					DiscordRPC.NopAt(DiscordLoc + 12, 1);
+					DiscordRPC.ReplaceAt(DiscordLoc + 13, (Instruction.Create(OpCodes.Ldstr, "509036024660492318")));
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
+			new Patch("Relax and Autopilot have miss and combobreak Sound", (patch, exp) =>
+			{
+				return new PatchResult(patch, PatchStatus.Disabled);
+			}),
+			new Patch("HardRock and Random mods ranked for Mania", (patch, exp) =>
+			{
+				return new PatchResult(patch, PatchStatus.Disabled);
+			}),
+			new Patch("Enable fail for Relax and Autopilot", (patch, exp) =>
+			{
+				return new PatchResult(patch, PatchStatus.Disabled);
 			}),
 		};
 	}
