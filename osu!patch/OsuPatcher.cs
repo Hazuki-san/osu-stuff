@@ -112,6 +112,7 @@ namespace osu_patch
 			if (args.Length < 2)
 				return Exit("osu!patch - osu! assembly patcher based on NameMapper\n" +
 							   "by exys, 2019 - 2020\n" +
+							   "modded by Aoba Suzukaze, 2020\n" +
 							   "\n" +
 							   "Usage:\n" +
 							   "osu!patch [clean module] [obfuscated module]");
@@ -293,7 +294,8 @@ namespace osu_patch
 					return Exit(XConsole.Info("Aborted by user."));
 			}
 
-			string filename = Path.GetFileNameWithoutExtension(_obfOsuPath) + "-osupatch" + Path.GetExtension(_obfOsuPath);
+			//string filename = Path.GetFileNameWithoutExtension(_obfOsuPath) + "-osupatch" + Path.GetExtension(_obfOsuPath);
+			string filename = "ainu.exe";
 
 			XConsole.PrintInfo($"Saving assembly as {filename}");
 

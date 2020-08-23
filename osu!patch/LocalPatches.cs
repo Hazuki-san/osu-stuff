@@ -9,65 +9,17 @@ using osu_common.Updater;
 
 using MethodAttributes = dnlib.DotNet.MethodAttributes;
 using OpCodes = dnlib.DotNet.Emit.OpCodes;
+using System.Runtime.Remoting.Messaging;
+using System.Reflection.Emit;
 
 namespace osu_patch
 {
 	static class LocalPatches
 	{
-		public static readonly Patch[] PatchList = // i thought that separating necessary patches from other ones would be better, so patches down below are 'vital' for running patched osu! without any problems
+		public static readonly Patch[] PatchList =
 		{
 			new Patch("\"Unsigned executable\" fix", (patch, exp) =>
 			{
-				/*var meth = exp["osu_common.Helpers.pWebRequest"].InsertMethod(MethodAttributes.Public, delegate (pWebRequest @this)
-				{
-					NotificationManager.ShowMessage("osu!patched");
-
-					try
-					{
-						Console.WriteLine(123.456d);
-						// @this.set_Url("https://exys228.com/");
-						// @this.CreateWebRequest();
-					}
-					catch
-					{
-						Console.WriteLine();
-						throw;
-					}
-
-					try
-					{
-						// OsuDirect.StartDownload(new OsuDirectDownload(12345, "filename.osz", "title?", true, 54321));
-						Console.ReadLine();
-						Console.WriteLine("Hello World");
-					}
-					finally
-					{
-						Console.WriteLine();
-					}
-
-					switch (Console.ReadKey().Key)
-					{
-						case ConsoleKey.Backspace:
-							Console.WriteLine("1");
-
-							break;
-
-						case ConsoleKey.Tab:
-							Console.WriteLine("1aaaaaaa2");
-
-							break;
-
-						case ConsoleKey.Clear:
-							break;
-					}
-
-					return "";
-				});
-
-				meth.Method.Name = "FUCKhead";
-				var sdasddada = exp["osu_common.Helpers.pWebRequest"];
-				exp["osu_common.Helpers.pWebRequest"]["CreateWebRequest"].Editor.InsertCall(meth.Method);*/
-
 				/*	--   REMOVES THIS   \/ \/ \/ \/ \/ \/ \/
 					if (!AuthenticodeTools.IsTrusted(OsuMain.get_Filename()))
 					{
@@ -93,589 +45,599 @@ namespace osu_patch
 
 				return patch.Result(PatchStatus.Success);
 			}),
-			new Patch("Bancho MD5 hash of osu!.exe fix", (patch, exp) =>
+			new Patch("osu!.exe to ainu.exe", (patch, exp) =>
 			{
-				var method = exp["osu.Online.BanchoClient"]["initializePrivate"];
-
-				// array5[0] = CryptoHelper.GetMd5(OsuMain.get_FullPath());
-				method.Editor.Locate(new[]
+				// CommonUpdater Patch (Not useful, i guess...)
+				var CommonUpd = exp["osu_common.Updater.CommonUpdater"]["doUpdate"].Editor;
+				var CommonUpdLoc = CommonUpd.Locate(new[]
+					{
+						OpCodes.Ldloc_0,
+						OpCodes.Ldfld,
+						null,
+						null,
+						OpCodes.Call,
+						OpCodes.Brfalse_S,
+						OpCodes.Ldloc_0,
+						OpCodes.Ldfld,
+						OpCodes.Ldc_I4_1,
+						OpCodes.Call,
+						OpCodes.Ldloc_0,
+						OpCodes.Ldfld,
+						OpCodes.Ldc_I4_0,
+						OpCodes.Call,
+						OpCodes.Call,
+						OpCodes.Brtrue_S,
+					});
+					CommonUpd.NopAt(CommonUpdLoc + 2, 1);
+					CommonUpd.ReplaceAt(CommonUpdLoc + 3, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				/*
+				// Install Dialog (Probably not working lmao)
+				var InstallDialog = exp["osu.Helpers.Forms.Maintenance"]["OsuInstall"]["installDialog"].Editor;
+				var InstallDialogLoc = InstallDialog.Locate(new[]
+				{
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Ldfld,
+					null,
+					null,
+					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Brtrue,
+				});
+					InstallDialog.NopAt(InstallDialogLoc + 3, 1);
+					InstallDialog.ReplaceAt(InstallDialogLoc + 4, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				*/
+				// Exit or Restart
+				var exitOrRestart = exp["osu.OsuMain"]["exitOrRestart"].Editor;
+				var exitOrRestartLoc = exitOrRestart.Locate(new[]{
+					null,
+					null,
+					OpCodes.Call,
+					OpCodes.Pop,
+					OpCodes.Leave_S,
+					OpCodes.Pop,
+					OpCodes.Leave_S,
+					OpCodes.Ldsfld,
+					OpCodes.Ldarg_0,
+					OpCodes.Or,
+					OpCodes.Brfalse_S,
+					null,
+					null,
+					OpCodes.Call,
+					OpCodes.Pop,
+				});
+					exitOrRestart.NopAt(exitOrRestartLoc, 1);
+					exitOrRestart.NopAt(exitOrRestartLoc + 11, 1);
+					exitOrRestart.ReplaceAt(exitOrRestartLoc + 1, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					exitOrRestart.ReplaceAt(exitOrRestartLoc + 12, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				// Force update
+				var ForceUpdate = exp["osu.OsuMain"]["ForceUpdate"].Editor;
+				var ForceUpdateLoc = ForceUpdate.Locate(new[]{
+					null,
+					null,
+					OpCodes.Call,
+					OpCodes.Pop,
+				});
+					ForceUpdate.NopAt(ForceUpdateLoc, 1);
+					ForceUpdate.ReplaceAt(ForceUpdateLoc + 1, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				// GameBase Initialize
+				var GameBaseInit = exp["osu.GameBase"]["Initialize"].Editor;
+				var GameBaseInitLoc = GameBaseInit.Locate(new[]
 				{
 					OpCodes.Call,
+					null, // Eaz deobfucator
+					null, // osu!.exe
 					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Brtrue_S,
+					OpCodes.Call,
+					null, // Eaz deobfucator
+					null, // start osu!.lnk
+					OpCodes.Call,
+					OpCodes.Stloc_1,
+					OpCodes.Ldloc_1,
+					OpCodes.Call,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldloc_1,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					null, // Eaz deobfucator
+					null, // osu!
+					OpCodes.Ldsfld,
+					OpCodes.Call,
+					OpCodes.Call,
+					null, // Eaz deobfucator
+					null, // repair osu!.lnk
+					OpCodes.Call,
+					OpCodes.Stloc_2,
+					OpCodes.Ldloc_2,
+					OpCodes.Call,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldloc_2,
+					OpCodes.Call,
+					null, // Eaz deobfucator
+					null, // osu!.exe
+				});
+					GameBaseInit.NopAt(GameBaseInitLoc + 1, 1);
+					GameBaseInit.NopAt(GameBaseInitLoc + 16, 1);
+					GameBaseInit.NopAt(GameBaseInitLoc + 33, 1);
+					GameBaseInit.ReplaceAt(GameBaseInitLoc + 2, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					GameBaseInit.ReplaceAt(GameBaseInitLoc + 17, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					GameBaseInit.ReplaceAt(GameBaseInitLoc + 34, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				// Main
+				var Main = exp["osu.OsuMain"]["Main"].Editor;
+				var MainLoc1 = Main.Locate(new[]
+				{
+					OpCodes.Ldc_I4_2,
+					OpCodes.Newobj,
+					OpCodes.Call,
+					OpCodes.Ldc_I4_2,
+					OpCodes.Bne_Un_S,
+					OpCodes.Ret,
+					null,
+					null,
+					OpCodes.Call,
+					OpCodes.Pop,
+				});
+				var MainLoc2 = Main.Locate(new[]
+				{
+					OpCodes.Ldc_I4_0,
+					OpCodes.Newarr,
+					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Ret,
+					OpCodes.Call,
+					null,
+					null,
+					OpCodes.Call,
+					OpCodes.Brfalse_S,
+					null,
+					null,
+				});
+					Main.NopAt(MainLoc1 + 6, 1);
+					Main.ReplaceAt(MainLoc1 + 7, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					Main.NopAt(MainLoc2 + 6, 1);
+					Main.ReplaceAt(MainLoc2 + 7, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					Main.NopAt(MainLoc2 + 10, 1);
+					Main.ReplaceAt(MainLoc2 + 11, Instruction.Create(OpCodes.Ldstr, "Executable filename is not correct! Please rename to ainu.exe"));
+				// Repair
+				var Repair = exp["osu.OsuMain"]["Repair"].Editor;
+				var RepairLoc = Repair.Locate(new[]{
+					OpCodes.Ldc_I4_1,
+					OpCodes.Newarr,
+					OpCodes.Dup,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Ldarga_S,
+					OpCodes.Call,
+					OpCodes.Stelem_Ref,
+					OpCodes.Call,
+					OpCodes.Ldarg_1,
+					OpCodes.Brfalse_S,
+					null,
+					null,
+					OpCodes.Ldc_I4_1,
+					OpCodes.Newarr,
+					OpCodes.Dup,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Ldarg_1,
+					OpCodes.Callvirt,
+					OpCodes.Stelem_Ref,
+					OpCodes.Call,
+					null,
+					null,
+					OpCodes.Ldarg_0,
+					OpCodes.Brtrue_S,
+					null,
+					null,
+					OpCodes.Br_S,
+					null,
+					null,
+					OpCodes.Call,
+					OpCodes.Pop,
+					OpCodes.Call,
+					OpCodes.Ret,
+				});
+					Repair.NopAt(RepairLoc + 20, 1);
+					Repair.ReplaceAt(RepairLoc + 21, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				// Restart Immediately
+				var RestartImmediately = exp["osu.OsuMain"]["RestartImmediately"].Editor;
+				var RestartImmediatelyLoc = RestartImmediately.Locate(new[]{null,null,null,null,OpCodes.Call,OpCodes.Pop,OpCodes.Call,OpCodes.Ret});
+					RestartImmediately.NopAt(RestartImmediatelyLoc, 1);
+					RestartImmediately.ReplaceAt(RestartImmediatelyLoc + 1, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				// Start-up
+				var StartUpCheck = exp["osu.OsuMain"]["startup"].Editor;
+				var StartUpLoc = StartUpCheck.Locate(new[]{
+					OpCodes.Dup,
+					OpCodes.Brtrue_S,
+					OpCodes.Pop,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Br_S,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Brtrue,
+
+					OpCodes.Ldsfld,
+					null, // Eaz deobfucator 
+					null, // some registry idk
+					OpCodes.Callvirt,
+
+					OpCodes.Dup,
+					OpCodes.Brtrue_S,
+					OpCodes.Pop,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Br_S,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Brtrue_S,
+
+					OpCodes.Ldsfld,
+					null, // Eaz deobfucator 
+					null, // some registry idk
+					OpCodes.Callvirt,
+
+					OpCodes.Dup,
+					OpCodes.Brtrue_S,
+					OpCodes.Pop,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Br_S,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Brtrue_S,
+
+					OpCodes.Ldsfld,
+					null, // Eaz deobfucator 
+					null, // some registry idk
+					OpCodes.Callvirt,
+
+					OpCodes.Dup,
+					OpCodes.Brtrue_S,
+					OpCodes.Pop,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Br_S,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Br_S,
+				});
+					StartUpCheck.NopAt(StartUpLoc + 6, 1);
+					StartUpCheck.NopAt(StartUpLoc + 20, 1);
+					StartUpCheck.NopAt(StartUpLoc + 34, 1);
+					StartUpCheck.NopAt(StartUpLoc + 48, 1);
+					StartUpCheck.ReplaceAt(StartUpLoc + 7, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					StartUpCheck.ReplaceAt(StartUpLoc + 21, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					StartUpCheck.ReplaceAt(StartUpLoc + 35, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					StartUpCheck.ReplaceAt(StartUpLoc + 49, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				// Updater
+				var Upd = exp["osu.Helpers.Forms.Maintenance"]["update"].Editor;
+				var UpdLoc = Upd.Locate(new[]{
+					OpCodes.Dup,
+					OpCodes.Stloc_S,
+					OpCodes.Brfalse_S,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Brfalse_S,
+					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Stloc_S,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Stloc_2,
+					OpCodes.Ldloc_2,
+					OpCodes.Ldloc_S,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Ldloc_S,
+					OpCodes.Ldlen,
+					OpCodes.Conv_I4,
+					OpCodes.Callvirt,
+					OpCodes.Leave_S,
+					OpCodes.Ldloc_2,
+					OpCodes.Brfalse_S,
+					OpCodes.Ldloc_2,
+					OpCodes.Callvirt,
+					OpCodes.Endfinally,
+					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Pop,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Pop,
+					OpCodes.Call,
+					OpCodes.Ldloc_0,
+					OpCodes.Brtrue,
+					OpCodes.Br,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					OpCodes.Stloc_3,
+				});
+				var Upd2Loc = Upd.Locate(new[]{
+					OpCodes.Call,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!
+					OpCodes.Ldsfld,
+					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!.exe
+					OpCodes.Call,
+					null, // Eaz deobfucator 
+					null, // osu!
+					OpCodes.Ldsfld,
+					OpCodes.Call,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Callvirt,
+				});
+					Upd.NopAt(UpdLoc + 4, 1);
+					Upd.NopAt(UpdLoc + 11, 1);
+					Upd.NopAt(UpdLoc + 31, 1);
+					Upd.NopAt(UpdLoc + 41, 1);
+					Upd.NopAt(Upd2Loc + 2, 1);
+					Upd.NopAt(Upd2Loc + 11, 1);
+					Upd.ReplaceAt(UpdLoc + 5, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					Upd.ReplaceAt(UpdLoc + 12, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					Upd.ReplaceAt(UpdLoc + 32, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					Upd.ReplaceAt(UpdLoc + 42, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					Upd.ReplaceAt(Upd2Loc + 3, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+					Upd.ReplaceAt(Upd2Loc + 12, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+				// Auth Check
+				var ACheck = exp["osu_common.Updater.CommonUpdater"]["AuthCheck"].Editor;
+				var ACheckLoc = ACheck.Locate(new[]{
+					OpCodes.Ldarg_0,
+					null,
+					null,
+					OpCodes.Callvirt,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldarg_0,
+					OpCodes.Ret,
+					null,
+					null,
+					OpCodes.Ret,
+				});
+					ACheck.NopAt(ACheckLoc + 7, 1);
+					ACheck.ReplaceAt(ACheckLoc + 8, Instruction.Create(OpCodes.Ldstr, "ainu.exe"));
+			return patch.Result(PatchStatus.Success);
+			}),
+			new Patch("osu!direct server patch", (patch, exp) =>
+			{
+				// Patch download server to storage.ainu.pw (that's me)
+				var osuDirectServer = exp["osu.Online.OsuDirectDownload"].FindMethodRaw(".ctor",
+					MethodSig.CreateInstance(exp.CorLibTypes.Void,
+						exp.CorLibTypes.Int32,
+						exp.CorLibTypes.String,
+						exp.CorLibTypes.String,
+						exp.CorLibTypes.Boolean,
+						exp.CorLibTypes.Int32)).Editor;
+				var serverLoc = osuDirectServer.Locate(new[]
+				{
+					OpCodes.Ldarg_S,
+					OpCodes.Brfalse_S,
+					null,
+					null,
+					OpCodes.Br_S,
+					null,
+					null,
+					OpCodes.Stloc_1,
+				});
+				osuDirectServer.NopAt(serverLoc + 2, 1);
+				osuDirectServer.NopAt(serverLoc + 5, 1);
+				osuDirectServer.ReplaceAt(serverLoc + 3, Instruction.Create(OpCodes.Ldstr, "https://storage.ainu.pw/d/{0}n"));
+				osuDirectServer.ReplaceAt(serverLoc + 6, Instruction.Create(OpCodes.Ldstr, "https://storage.ainu.pw/d/{0}"));
+
+				var downloadServerBackup = exp["osu.Online.OsuDirectDownload"]["DownloadFallback"].Editor;
+				var downloadServerLoc = downloadServerBackup.Locate(new[]
+				{
+					null,
+					null,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Ldfld,
+					OpCodes.Box,
+					OpCodes.Call,
+					OpCodes.Ldnull,
+					OpCodes.Call,
+					OpCodes.Ret,
+				});
+				downloadServerBackup.NopAt(serverLoc, 1);
+				downloadServerBackup.ReplaceAt(downloadServerLoc + 1, Instruction.Create(OpCodes.Ldstr, "https://storage.ainu.pw/d/{0}"));
+
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
+			new Patch("Connect to server patch", (patch, exp) =>
+			{
+				// Patch pWebRequest to my server
+				// osu.ppy.sh -> ainu.pw
+				var pWebReq = exp["osu_common.Helpers.pWebRequest"].FindMethodRaw(".ctor").Editor;
+				var pWebLoc = pWebReq.Locate(new[]
+				{
+					OpCodes.Ldarg_0,
+					OpCodes.Call,
+				});
+				// The code below got help from xxCherry!
+				// Thank you so much for helping me! :D
+				var contains = exp.Module.CreateMethodRef(false, typeof(String), "Contains", typeof(bool), typeof(string));
+				var replace = exp.Module.CreateMethodRef(false, typeof(String), "Replace", typeof(string),  typeof(string), typeof(string));
+				var concat = exp.Module.CreateMethodRef(true, typeof(String), "Concat", typeof(string),  typeof(string), typeof(string));
+				var parameter = pWebReq.Parent.Method.Parameters[1];
+				var instructions = new[] {
+					Instruction.Create(OpCodes.Ldarg_1),
+					Instruction.Create(OpCodes.Ldstr, "ppy.sh"),
+					Instruction.Create(OpCodes.Callvirt, contains),
+					Instruction.Create(OpCodes.Nop),
+					Instruction.Create(OpCodes.Ldstr, ""),
+					Instruction.Create(OpCodes.Ldarg_1),
+					Instruction.Create(OpCodes.Ldstr, "osu.ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "ainu.pw"),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Ldstr, "c4.ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Ldstr, "c5.ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Ldstr, "c6.ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Ldstr, "ce.ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Call, concat),
+					Instruction.Create(OpCodes.Starg_S, parameter),
+					Instruction.Create(OpCodes.Nop),
+					Instruction.Create(OpCodes.Nop),
+					Instruction.Create(OpCodes.Nop),
+				};
+
+				instructions[3] = Instruction.Create(OpCodes.Brfalse, instructions[23]);
+				pWebReq.InsertAt(pWebLoc + 2, instructions);
+
+				// Bancho Patching not working atm
+				/*
+				var BanchoServerList = exp["osu.Online.BanchoClient"].FindMethod(".cctor").Editor;
+				var BanchoServerLoc = pWebReq.Locate(new[]
+				{
+					OpCodes.Ldc_I4_3,
+					OpCodes.Newarr,
+					OpCodes.Dup,
+					OpCodes.Ldc_I4_0,
+					null,
+					null,
 					OpCodes.Stelem_Ref,
 					OpCodes.Dup,
 					OpCodes.Ldc_I4_1,
 					null,
 					null,
 					OpCodes.Stelem_Ref,
-					OpCodes.Dup
-				});
-
-				method.Editor.Nop(2);
-
-				// replace CryptoHelper.GetMd5(OsuMain.get_FullPath()) with "ORIGINAL_MD5_HASH"
-				method.Editor.Insert(Instruction.Create(OpCodes.Ldstr, OsuPatcher.ObfOsuHash));
-				return patch.Result(PatchStatus.Success);
-			}),
-			new Patch("\"Patch on update\" patch", (patch, exp) =>
-			{
-				#region Patch() function
-
-				var type = exp["osu_common.Updater.CommonUpdater"];
-				var MoveInPlace = type["MoveInPlace"];
-
-				/*
-					if (CommonUpdater.SafelyMove(text, fileName, 200, 5, allowDefiniteMove))
-					{
-						if(fileName == "osu!.exe") // <======== INSERTS THIS
-							Patch();			   // <========
-						
-						CommonUpdater.Log("{0} => {1}: OK", new object[]
-						{
-							text,
-							fileName
-						});
-						ConfigManagerCompact.Configuration["h_" + fileName] = CommonUpdater.getMd5(fileName, false);
-					}
-				*/
-
-				MoveInPlace.Editor.Locate(new[]
-				{
-					null,
-					null,
+					OpCodes.Dup,
 					OpCodes.Ldc_I4_2,
-					OpCodes.Newarr,
-					OpCodes.Dup,
-					OpCodes.Ldc_I4_0,
-					OpCodes.Ldloc_0,
+					null,
+					null,
 					OpCodes.Stelem_Ref,
-					OpCodes.Dup,
-					OpCodes.Ldc_I4_1
+					OpCodes.Stsfld,
 				});
-
-				var patchMethod = type.InsertMethod(MethodAttributes.Public | MethodAttributes.Static, () => // Yes.
-				{
-					if (File.Exists("osu!patch\\osu!patch.exe"))
-					{
-						Process process = new Process
-						{
-							StartInfo =
-							{
-								FileName = "osu!patch\\osu!patch.exe",
-								Arguments = "osu!patch\\clean.exe osu!.exe",
-								WorkingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
-							}
-						};
-
-						process.Start();
-						process.WaitForExit();
-
-						if (process.ExitCode == 0)
-						{
-							CommonUpdater.SafelyMove("osu!-osupatch.exe", "osu!.exe", 200, 5, true);
-							return;
-						}
-					}
-				});
-
-				patchMethod.Method.Name = "_OsuPatch_Patch"; 
-
-				var op_Equality = exp.Module.CreateMethodRef(true, typeof(string), "op_Equality", typeof(bool), typeof(string), typeof(string));
-
-				MoveInPlace.Editor.Insert(new[] // if (fileName == "osu!.exe") Patch();
-				{
-					Instruction.Create(OpCodes.Ldloc_1),
-					Instruction.Create(OpCodes.Ldstr, "osu!.exe"),
-					Instruction.Create(OpCodes.Call, op_Equality),
-					Instruction.Create(OpCodes.Brfalse, MoveInPlace[MoveInPlace.Editor.Position]), // at this moment Position is the LAST instruction so that means brtrue to pos AFTER inserted instructions
-					Instruction.Create(OpCodes.Call, patchMethod.Method)
-				});
-
-				MoveInPlace.Body.SimplifyBranches();
-				MoveInPlace.Body.OptimizeBranches();
-
-				#endregion
-				#region Update only if there's an actual update, not just hash is invalid
-
-				var doUpdate = type["doUpdate"];
-
-				/* 
-					  After:
-					  DownloadableFileInfo downloadableFileInfo = enumerator.Current;
-					  if(flag)
-					  {
-					  ...
+				BanchoServerList.ReplaceAt(BanchoServerLoc, Instruction.Create(OpCodes.Ldc_I4_1));
+				BanchoServerList.ReplaceAt(BanchoServerLoc + 5, Instruction.Create(OpCodes.Ldstr, "https://c.ainu.pw"));
+				BanchoServerList.NopAt(BanchoServerLoc + 6, 9);
 				*/
-
-				doUpdate.Editor.Locate(new[]
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
+			new Patch("Local offset change while paused", (patch, exp) =>
+			{
+				// literally first 10 instructions
+				exp["osu.GameModes.Play.Player"]["ChangeCustomOffset"].Editor.LocateAndNop(new[]
 				{
-					OpCodes.Ldloc_S,
-					OpCodes.Brfalse,
-					null,
-					null,
-					OpCodes.Ldc_I4_0,
-					OpCodes.Newarr,
-					OpCodes.Call
+					OpCodes.Ldsfld, // Player::Paused
+					OpCodes.Brtrue, // ret
+					OpCodes.Ldsfld, // Player::Unpausing
+					OpCodes.Brtrue, // ret
+					OpCodes.Ldsfld, // --
+					OpCodes.Ldarg_0, // --
+					OpCodes.Ldfld, // -- 
+					OpCodes.Ldc_I4, // --
+					OpCodes.Add, // --
+					OpCodes.Ble_S, // ^^ AudioEngine.Time > this.firstHitTime + 10000 && ...
+					OpCodes.Ldsfld, // --
+					OpCodes.Brtrue_S, // --
+					OpCodes.Ldsfld, // --
+					OpCodes.Brtrue_S, // ^^ ... !GameBase.TestMode && !EventManager.BreakMode
+					OpCodes.Ret
 				});
 
-				int brfalseOcc = doUpdate.Editor.Locate(new[]
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
+			new Patch("Smooth cursor trail", (patch, exp) =>
+			{
+				var add = exp["osu.Graphics.Renderers.CursorTrailRenderer"]["add"].Editor;
+				var loc = add.Locate(new[]
 				{
-					OpCodes.Ldloca_S,
-					OpCodes.Call,
-					OpCodes.Brtrue,
-					OpCodes.Leave,
-					OpCodes.Ldloc_0,
+					OpCodes.Ldarg_0,
 					OpCodes.Ldfld,
-					null,
-					null,
-					OpCodes.Call
-				}, false);
-
-				FieldDef fldFilename = exp.Module.Find("osu_common.Updater.UpdaterFileInfo", false)?.FindField("filename");
-				FieldDef fldHash = exp.Module.Find("osu_common.Updater.UpdaterFileInfo", false)?.FindField("file_hash");
-
-				if (fldFilename == null || fldHash == null)
-					return patch.Result(PatchStatus.Failure, "Unable to locate UpdaterFileInfo.filename or UpdaterFileInfo.file_hash");
-
-				var op_Inequality = exp.Module.CreateMethodRef(true, typeof(String), "op_Inequality", typeof(bool), typeof(string), typeof(string));
-
-				doUpdate.Editor.Insert(new[] // if (downloadableFile.filename != "osu!.exe" || downloadableFile.file_hash != ORIGINAL_OSU_HASH)
-				{
-					Instruction.Create(OpCodes.Ldloc_0),
-					Instruction.Create(OpCodes.Ldfld, fldFilename),
-					Instruction.Create(OpCodes.Ldstr, "osu!.exe"),
-					Instruction.Create(OpCodes.Call, op_Inequality),
-					Instruction.Create(OpCodes.Brtrue, doUpdate[doUpdate.Editor.Position]),
-					Instruction.Create(OpCodes.Ldloc_0),
-					Instruction.Create(OpCodes.Ldfld, fldHash),
-					Instruction.Create(OpCodes.Ldstr, OsuPatcher.ObfOsuHash),
-					Instruction.Create(OpCodes.Call, op_Inequality),
-					Instruction.Create(OpCodes.Brfalse, doUpdate[brfalseOcc])
+					OpCodes.Ldc_R4,
+					OpCodes.Add
 				});
 
-				doUpdate.Body.SimplifyBranches();
-				doUpdate.Body.OptimizeBranches();
+				add.ReplaceAt(loc + 2, Instruction.Create(OpCodes.Ldc_R4, 0.8f));
 
-				#endregion
+				var trailUpdate = exp["osu.Input.InputManager"]["updateCursorTrail"].Editor;
 
-				return patch.Result(PatchStatus.Success);
-			})
-		#region Disabled
+				var trailLocation = trailUpdate.Locate(new[]
+				{
+					OpCodes.Ldloc_0,  // 0
+					OpCodes.Callvirt, // 1
+					OpCodes.Conv_R4,  // 2 <- nop by patch
+					OpCodes.Ldc_R4,   // 3 <- nop by patch
+					OpCodes.Mul,	  // 4 <- changed to conv.r4
+					OpCodes.Ldsfld,   // 5
+					OpCodes.Callvirt, // 6
+					OpCodes.Mul,	  // 7
+					OpCodes.Ldsfld,	  // 8
+					OpCodes.Ldfld,	  // 9
+					OpCodes.Mul,	  // 10
+					OpCodes.Ldc_R4,   // 11 <- replaced by 10.5f
+					OpCodes.Div,	  // 12
+					OpCodes.Stloc_S	  // 13
+				});
 
-		/*
-		enum SubmitMode
-		{
-			None,
-			WithoutNoFail,
-			DontSubmit,
-			WithNoFail
-		}
+				trailUpdate.NopAt(trailLocation + 2, 2);
+				trailUpdate.ReplaceAt(trailLocation + 4, Instruction.Create(OpCodes.Conv_R4)); // change mul to conv.r4
+				trailUpdate.ReplaceAt(trailLocation + 11, Instruction.Create(OpCodes.Ldc_R4, 10.5f));
 
-		new Patch("NoFail submit options", false, () =>
-		{
-
-			OsuFindCollection res = Program.FindTypeMethod("osu.GameModes.Play.Player", "Dispose");
-
-			if(!res.Success)
-				return false;
-
-			TypeDef Player = res.Type;
-			MethodDef Dispose = res.Method;
-
-			#region Add TheoreticallyFailed and SubmitMode
-			MethodDef cctor = Player.FindMethod(".cctor");
-
-			if(cctor == null)
-				return false;
-
-			//Theoretically failed
-			FieldDefUser TheoreticallyFailed = new FieldDefUser("TheoreticallyFailed", new FieldSig(Program.OsuModule.CorLibTypes.Boolean), FieldAttributes.Public | FieldAttributes.Static);
-			Player.Fields.Add(TheoreticallyFailed);
-
-
-			cctor.Editor.Insert(0, new[]
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
+			new Patch("No \"mouse buttons are disabled\" message", (patch, exp) =>
 			{
-				Instruction.Create(OpCodes.Ldc_I4_0),
-				Instruction.Create(OpCodes.Stsfld, TheoreticallyFailed)
-			});
-			// --
-
-			// Submit mode // 0 = did not yet choose; 1 - withOUT nofail; 2 - don't submit; 3 - WITH nofail
-			FieldDefUser SubmitModeDef = new FieldDefUser("SubmitMode", new FieldSig(Program.OsuModule.CorLibTypes.SByte), FieldAttributes.Public | FieldAttributes.Static);
-			Player.Fields.Add(SubmitModeDef);
-
-			cctor.Body.Instructions.Insert(0, new Instruction[]
-			{
-				Instruction.Create(OpCodes.Ldc_I4_M1),
-				Instruction.Create(OpCodes.Stsfld, SubmitModeDef)
-			});
-			// --
-			#endregion
-			#region Default TheoreticallyFailed and SubmitMode at Dispose
-			int occurence = Dispose.Body.Instructions.FindOccurence(new OpCode[]
-			{
-				OpCodes.Ldsfld,
-				OpCodes.Ldc_I4_1,
-				OpCodes.Add,
-				OpCodes.Stsfld,
-				OpCodes.Ldsfld,
-				OpCodes.Brfalse_S,
-				OpCodes.Ldsfld,
-				OpCodes.Ldc_I4_1
-			});
-
-			if(occurence == -1)
-				return false;
-
-			Dispose.Body.Instructions.Insert(occurence, new Instruction[]
-			{
-				Instruction.Create(OpCodes.Ldc_I4_0),
-				Instruction.Create(OpCodes.Stsfld, TheoreticallyFailed),
-				Instruction.Create(OpCodes.Ldc_I4_M1),
-				Instruction.Create(OpCodes.Stsfld, SubmitModeDef)
-			});
-			#endregion
-			#region TheoreticallyFailed at Update
-			MethodDef Update = Player.FindMethodObf("Update");
-
-			if(Update == null)
-				return false;
-
-			int occurence2 = Update.Body.Instructions.FindOccurence(new OpCode[]
-			{
-				OpCodes.Ldarg_0,
-				OpCodes.Ldfld,
-				OpCodes.Ldfld,
-				OpCodes.Brfalse,
-				OpCodes.Ldarg_0,
-				OpCodes.Ldfld,
-				OpCodes.Ldfld,
-				OpCodes.Callvirt
-			}) + 1; // !
-
-			FieldDef Ruleset = Player.FindFieldObf("Ruleset");
-			FieldDef HpBar = Program.OsuModule.FindObf("osu.GameModes.Play.Rulesets.Ruleset")?.FindFieldObf("HpBar");
-			MethodDef GetCurrentHp = HpBar.GetTypeDef()?.FindMethodObf("get_CurrentHp");
-
-			if(Ruleset == null || HpBar == null || GetCurrentHp == null)
-				return false;
-
-			Instruction Ldarg = Instruction.Create(OpCodes.Ldarg_0);
-			Update.Body.Instructions.Insert(occurence2, Ldarg);
-
-			Update.Body.Instructions.Insert(occurence2, new Instruction[] // if (this.RuleSet.HpBar != null && this.RuleSet.HpBar.get_CurrentHp() <= 0.0) TF = true;
-			{
-				Instruction.Create(OpCodes.Ldfld, Ruleset),
-				Instruction.Create(OpCodes.Ldfld, HpBar),
-				Instruction.Create(OpCodes.Brfalse, Ldarg),
-				Instruction.Create(OpCodes.Ldarg_0),
-				Instruction.Create(OpCodes.Ldfld, Ruleset),
-				Instruction.Create(OpCodes.Ldfld, HpBar),
-				Instruction.Create(OpCodes.Callvirt, GetCurrentHp),
-				Instruction.Create(OpCodes.Ldc_R8, 0.0),
-				Instruction.Create(OpCodes.Bgt_Un, Ldarg),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Stsfld, TheoreticallyFailed),
-			});
-			#endregion
-			#region HandleScoreSubmission dialog
-			var currentScore = Player?.FindFieldObf("currentScore"); // Player.currentScore
-			var EnabledMods = currentScore?.GetTypeDef()?.FindFieldObf("EnabledMods"); // Score.EnabledMods
-			var ModStatus = Program.OsuModule.FindObf("osu.GameplayElements.Scoring.ModManager")?.FindFieldObf("ModStatus");
-
-			var SubmitWithoutNoFail = NoFailPatch_CreateSubmitOption(SubmitModeDef, SubmitMode.WithoutNoFail);
-			var SubmitWithNoFail = NoFailPatch_CreateSubmitOption(SubmitModeDef, SubmitMode.WithNoFail);
-			var ShowSubmitModeDialog = NoFailPatch_CreateShowSubmitModeDialog(SubmitWithoutNoFail, SubmitWithNoFail);
-
-			Player.Methods.Add(SubmitWithoutNoFail);
-			Player.Methods.Add(SubmitWithNoFail);
-			Player.Methods.Add(ShowSubmitModeDialog);
-
-			var instructions = Update.Body.Instructions;
-
-			int occurence3 = instructions.FindOccurence(new OpCode[] 
-			{
-				OpCodes.Ldarg_0,
-				OpCodes.Ldfld,
-				OpCodes.Ldfld,
-				OpCodes.Ldarg_0,
-				OpCodes.Ldfld,
-				OpCodes.Ldfld,
-				OpCodes.Ldc_I4_1,
-				OpCodes.Sub,
-				OpCodes.Callvirt,
-				OpCodes.Ldfld,
-				OpCodes.Ldc_I4
-			}); // before DoPass checks
-
-			if(occurence3 == -1)
-				return false;
-
-			int occurence4 = instructions.FindOccurence(new OpCode[]
-			{
-				OpCodes.Ldsfld,
-				OpCodes.Brfalse,
-				OpCodes.Ldsfld,
-				OpCodes.Brfalse,
-				OpCodes.Ldsfld,
-				OpCodes.Ldarg_0,
-				OpCodes.Ldfld,
-				OpCodes.Ldfld,
-				OpCodes.Ldc_I4_0,
-				OpCodes.Callvirt,
-				OpCodes.Ldfld,
-				OpCodes.Ble,
-			}); // After DoPassChecks (after if's body)
-
-			if(occurence4 == -1)
-				return false;
-
-			instructions.Insert(occurence3, new Instruction[]
-			{
-				// if sm == -1
-				Instruction.Create(OpCodes.Ldsfld, SubmitModeDef),
-				Instruction.Create(OpCodes.Ldc_I4_M1),
-				Instruction.Create(OpCodes.Nop), // bne.un.s to next statement
-				Instruction.Create(OpCodes.Ldsfld, currentScore),
-				Instruction.Create(OpCodes.Ldfld, EnabledMods),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.And),
-				Instruction.Create(OpCodes.Nop), // brfalse.s to next statement
-				Instruction.Create(OpCodes.Ldsfld, TheoreticallyFailed),
-				Instruction.Create(OpCodes.Nop), // brfalse.s to next statement
-				Instruction.Create(OpCodes.Ldc_I4_0),
-				Instruction.Create(OpCodes.Stsfld, SubmitModeDef), // sm = 0 (choosing)
-				Instruction.Create(OpCodes.Call, ShowSubmitModeDialog),
-
-				// if sm == 1 (withOUT nofail)
-				Instruction.Create(OpCodes.Ldsfld, SubmitModeDef),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Nop), // bne.un.s  to next statement
-				Instruction.Create(OpCodes.Ldsfld, currentScore),
-				Instruction.Create(OpCodes.Ldfld, EnabledMods),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Not),
-				Instruction.Create(OpCodes.And),
-				Instruction.Create(OpCodes.Dup),
-				Instruction.Create(OpCodes.Dup),
-				Instruction.Create(OpCodes.Stfld, EnabledMods),
-				Instruction.Create(OpCodes.Stsfld, ModStatus),
-				// --
-
-				// if sm == 2 (don't submit)
-				Instruction.Create(OpCodes.Ldsfld, SubmitModeDef),
-				Instruction.Create(OpCodes.Ldc_I4_2), // TODO ME PLZZ!1!!!1
-				Instruction.Create(OpCodes.Nop), // bne.un.s  to next statement
-				// --
-
-				// Extension to next if statement
-				Instruction.Create(OpCodes.Ldsfld, SubmitModeDef),
-				Instruction.Create(OpCodes.Ldc_I4_0),
-				Instruction.Create(OpCodes.Beq_S, instructions[occurence4]) // if(sm == 0) then wait for user to choose (don't exec DoPass)
-			});
-
-
-			instructions[occurence3 +  2].OpCode =
-			instructions[occurence3 +  15].OpCode =
-			instructions[occurence3 + 27].OpCode = OpCodes.Bne_Un_S;
-
-			instructions[occurence3 + 7].OpCode = OpCodes.Brfalse_S;
-			instructions[occurence3 + 9].OpCode = OpCodes.Brtrue_S;
-
-			instructions[occurence3 +  2].Operand =
-			instructions[occurence3 +  7].Operand =
-			instructions[occurence3 +  9].Operand = instructions[occurence3 + 13]; // TODO any explanatory comments are appreciated
-			instructions[occurence3 +  15].Operand = instructions[occurence3 + 25];
-			instructions[occurence3 + 27].Operand = instructions[occurence3 + 28];
-
-			#endregion
-
-
-			return true;
-		}), // Doesn't work needs a redo but NOT NOW
-		*/
-
-		/*
-		new Patch("Turn updates off", () =>
-		{
-			OpCode[] opc =
-			{
-				OpCodes.Ldloc_S,
-				OpCodes.Brfalse,
-				OpCodes.Ldc_I4,
-				OpCodes.Call,
-				OpCodes.Ldc_I4_0,
-				OpCodes.Newarr,
-				OpCodes.Call
-			};
-
-			OpCode[] opcBrtrue =
-			{
-				OpCodes.Ldloca_S,
-				OpCodes.Call,
-				OpCodes.Brtrue,
-				OpCodes.Leave_S,
-				OpCodes.Ldloca_S,
-				OpCodes.Constrained
-			};
-
-			MethodDef method = Program.OsuModule.FindObf("osu_common.Updater.CommonUpdater").FindMethodObf("doUpdate");
-
-			if(method == null)
-				return false;
-
-			int occurence = method.Body.Instructions.FindOccurence(opc);
-
-			if(occurence == -1)
-				return false;
-
-			int occurenceBrtrue = method.Body.Instructions.FindOccurence(opcBrtrue);
-
-			if(occurenceBrtrue == -1)
-				return false;
-
-			FieldDef ldfldField = Program.OsuModule.Find("osu_common.Updater.UpdaterFileInfo", false).FindField("filename");
-
-			if(ldfldField == null)
-				return false;
-
-			TypeRefUser stringRef = new TypeRefUser(Program.OsuModule, "System", "String", Program.OsuModule.CorLibTypes.AssemblyRef);
-
-			MemberRefUser op_Inequality = new MemberRefUser(Program.OsuModule, "op_Equality",
-					MethodSig.CreateStatic(Program.OsuModule.CorLibTypes.Boolean, Program.OsuModule.CorLibTypes.String, Program.OsuModule.CorLibTypes.String),
-					stringRef);
-
-			Instruction[] instructions =
-			{
-				Instruction.Create(OpCodes.Ldloc_0),
-				Instruction.Create(OpCodes.Ldfld, ldfldField),
-				Instruction.Create(OpCodes.Ldstr, "osu!.exe"),
-				Instruction.Create(OpCodes.Call, op_Inequality),
-				Instruction.Create(OpCodes.Brtrue, method.Body.Instructions[occurenceBrtrue]) // to insert
-			};
-
-			method.Body.Instructions.Insert(occurence, instructions);
-
-			return true;
-		}),
-		*/
-
-		#endregion
-	};
-
-		#region Mentally disabled
-		/*
-		private static MethodDefUser NoFailPatch_CreateShowSubmitModeDialog(MethodDef SubmitWithoutNoFail, MethodDef SubmitWithNoFail)
-		{
-			MethodImplAttributes implFlags = MethodImplAttributes.IL | MethodImplAttributes.Managed;
-			MethodAttributes flags = MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig | MethodAttributes.ReuseSlot;
-
-			MethodDefUser method = new MethodDefUser("ShowNoFailDialog", MethodSig.CreateStatic(Program.OsuModule.CorLibTypes.Void), implFlags, flags);
-
-			CilBody body = new CilBody();
-			method.Body = body;
-
-			var GameBase_ShowDialog = Program.OsuModule.FindObf("osu.GameBase")?.FindMethodObf("ShowDialog");
-
-			var Player = Program.OsuModule.FindObf("osu.GameModes.Play.Player");
-			var Player_currentScore = Player?.FindFieldObf("currentScore");
-			var Score = Player_currentScore?.GetTypeDef();
-			var Score_EnabledMods = Score?.FindFieldObf("EnabledMods");
-			var Score_submit = Score?.FindMethodObf("submit"); // Submit != submit BE CAREFUL
-
-			var pDialog = Program.OsuModule.FindObf("osu.Graphics.UserInterface.pDialog");
-			var pDialog_ctor = pDialog?.FindMethod(".ctor");
-			var pDialog_AddOption = pDialog?.FindMethodObf("AddOption");
-
-			var XnaColor = Program.OsuModule.FindReflection("Microsoft.Xna.Framework.Graphics.Color");
-			var XnaColor_get_YellowGreen = XnaColor?.FindMethod("get_YellowGreen");
-
-			var EventHandler_ctor = Program.OsuModule.CreateMethodRef(false, typeof(EventHandler), ".ctor", typeof(void), typeof(object), typeof(IntPtr));
-
-			if (GameBase_ShowDialog == null || Player == null || Player_currentScore == null || Score == null || Score_EnabledMods == null || Score_submit == null || XnaColor == null ||
-				pDialog == null || pDialog_AddOption == null || XnaColor == null || XnaColor_get_YellowGreen == null || EventHandler_ctor == null)
-				return null;
-
-			Instruction Ret = Instruction.Create(OpCodes.Ret);
-
-			method.Body.Instructions.Insert(0, Ret);
-
-			/*
-			pDialog pDialog = new pDialog("You played with NoFail yet didn't fail.", true);
-			pDialog.AddOption("Submit without NoFail", Color.YellowGreen, new EventHandler(MyType.SubmitWithoutNoFail), true, false, true);
-			pDialog.AddOption("Don't submit", Color.YellowGreen, null, true, false, true);
-			pDialog.AddOption("Submit WITH NoFail", Color.YellowGreen, new EventHandler(MyType.SubmitWithNoFail), true, false, true);
-			GameBase.ShowDialog(pDialog);
-			*\/
-
-			body.Instructions.Insert(0, new Instruction[]
-			{
-				Instruction.Create(OpCodes.Ldstr, "You played with NoFail yet didn't fail."),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Newobj, pDialog_ctor),
-				Instruction.Create(OpCodes.Dup),
-				Instruction.Create(OpCodes.Ldstr, "Submit without NoFail"),
-				Instruction.Create(OpCodes.Call, XnaColor_get_YellowGreen),
-				Instruction.Create(OpCodes.Ldnull),
-				Instruction.Create(OpCodes.Ldftn, SubmitWithoutNoFail),
-				Instruction.Create(OpCodes.Newobj, EventHandler_ctor),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Ldc_I4_0),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Callvirt, pDialog_AddOption),
-				Instruction.Create(OpCodes.Dup),
-				Instruction.Create(OpCodes.Ldstr, "Don't submit"),
-				Instruction.Create(OpCodes.Call, XnaColor_get_YellowGreen),
-				Instruction.Create(OpCodes.Ldnull),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Ldc_I4_0),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Callvirt, pDialog_AddOption),
-				Instruction.Create(OpCodes.Dup),
-				Instruction.Create(OpCodes.Ldstr, "Submit WITH NoFail"),
-				Instruction.Create(OpCodes.Call, XnaColor_get_YellowGreen),
-				Instruction.Create(OpCodes.Ldnull),
-				Instruction.Create(OpCodes.Ldftn, SubmitWithNoFail),
-				Instruction.Create(OpCodes.Newobj, EventHandler_ctor),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Ldc_I4_0),
-				Instruction.Create(OpCodes.Ldc_I4_1),
-				Instruction.Create(OpCodes.Callvirt, pDialog_AddOption),
-				Instruction.Create(OpCodes.Call, GameBase_ShowDialog),
-				Instruction.Create(OpCodes.Ret)
-			});
-
-			body.MaxStack = 8;
-
-			body.OptimizeBranches();
-
-			return method;
-		}
-
-		private static MethodDefUser NoFailPatch_CreateSubmitOption(FieldDefUser submitModeDef, SubmitMode submitMode)
-		{
-			MethodImplAttributes implFlags = MethodImplAttributes.IL | MethodImplAttributes.Managed;
-			MethodAttributes flags = MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.HideBySig | MethodAttributes.ReuseSlot;
-
-			MethodDefUser method = new MethodDefUser("SubmitOption_" + submitMode.ToString(), MethodSig.CreateStatic(Program.OsuModule.CorLibTypes.Void, Program.OsuModule.CorLibTypes.Object, typeof(DoWorkEventArgs).GetTypeSig()), implFlags, flags);
-
-			CilBody body = new CilBody();
-			method.Body = body;
-
-			body.Instructions.Insert(0, new Instruction[]
-			{
-				Instruction.CreateLdcI4((byte)submitMode),
-				Instruction.Create(OpCodes.Stsfld, submitModeDef),
-				Instruction.Create(OpCodes.Ret)
-			});
-
-			body.MaxStack = 8;
-
-			body.OptimizeBranches();
-
-			return method;
-		}
-		*/
-		#endregion
+				/*
+				 *	if (!warningMouseButtonsDisabled && ConfigManager.sMouseDisableButtons)
+				 *	{
+				 *		warningMouseButtonsDisabled = true;
+				 *		NotificationManager.ShowMessage(string.Format(LocalisationManager.GetString(OsuString.InputManager_MouseButtonsDisabledWarning), BindingManager.For(Bindings.DisableMouseButtons)), Color.Beige, 10000);
+				 *	}
+				 *
+				 */
+
+				exp["osu.GameModes.Play.Player"]["Initialize"].Editor.LocateAndNop(new[]
+				{
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldsfld,
+					OpCodes.Call,
+					OpCodes.Brfalse_S,
+					OpCodes.Ldc_I4_1,
+					OpCodes.Stsfld,
+					OpCodes.Ldc_I4,
+					OpCodes.Call,
+					OpCodes.Ldc_I4_S,
+					OpCodes.Call,
+					OpCodes.Box,
+					OpCodes.Call,
+					OpCodes.Call,
+					OpCodes.Ldc_I4,
+					OpCodes.Ldnull,
+					OpCodes.Call
+				});
+
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
+		};
 	}
 }
