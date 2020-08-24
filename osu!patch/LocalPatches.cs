@@ -560,6 +560,25 @@ namespace osu_patch
 				*/
 				return new PatchResult(patch, PatchStatus.Success);
 			}),
+			new Patch("Disable osu! update", (patch, exp) =>
+			{
+				exp["osu.GameBase"]["CheckForUpdates"].Editor.LocateAndNop(new[]{
+					OpCodes.Ldarg_0,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldarg_1,
+					OpCodes.Brtrue_S,
+					OpCodes.Call,
+					OpCodes.Ldsfld,
+					OpCodes.Call,
+					OpCodes.Stloc_1,
+					OpCodes.Ldloca_S,
+					OpCodes.Call,
+					OpCodes.Ldc_R8,
+					OpCodes.Bge_Un_S,
+					//OpCodes.Ret,
+				});
+				return new PatchResult(patch, PatchStatus.Success);
+			}),
 			new Patch("Local offset change while paused", (patch, exp) =>
 			{
 				// literally first 10 instructions
@@ -720,10 +739,56 @@ namespace osu_patch
 			}),
 			new Patch("Relax and Autopilot have miss and combobreak Sound", (patch, exp) =>
 			{
+				/*
+				// Combobreak
+				var Combobreak = exp["osu.GameModes.Play.Rulesets.Ruleset"]["IncreaseScoreHit"].Editor;
+				var CombobreakLoc = Combobreak.Locate(new[]
+				{
+					OpCodes.Br,
+					OpCodes.Ldarg_0,
+					OpCodes.Ldfld,
+					OpCodes.Callvirt,
+					OpCodes.Ldc_I4_S,
+					OpCodes.Ble_S,
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+					OpCodes.Ldsfld,
+					OpCodes.Brtrue_S,
+				});
+				Combobreak.NopAt(CombobreakLoc+6, 4);
+				// Show misses
+				var HitObj = exp["osu.GameplayElements.HitObjects.HitObject"].Type;
+				var IncScore = exp["osu.GameModes.Play.Rulesets.IncreaseScoreType"].Type;
+				var w = exp["osu.GameplayElements.HitObjectManager"].FindMethod("UhIDKWhatThisIsButThisIsWhereMissShowedUp",
+					MethodSig.CreateStatic(
+						IncScore.ToTypeSig(),
+						HitObj.ToTypeSig())).Editor;
+				var wLoc = w.Locate(new[]{OpCodes.Ldarg_0});
+				*/
 				return new PatchResult(patch, PatchStatus.Disabled);
 			}),
 			new Patch("HardRock and Random mods ranked for Mania", (patch, exp) =>
 			{
+				/*
+				var ModMan = exp["osu.GameplayElements.Scoring"]["AllowRanking"].Editor;
+				var HRRDLoc = ModMan.Locate(new[]
+				{
+					OpCodes.Call,
+					OpCodes.Ldc_I4_3,
+					OpCodes.Bne_Un_S,
+					OpCodes.Ldarg_0,
+					OpCodes.Stloc_2,
+					OpCodes.Ldc_I4,
+					OpCodes.Ldloc_2,
+					OpCodes.And,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Cgt,
+					OpCodes.Brfalse_S,
+					OpCodes.Ldc_I4_0,
+					OpCodes.Ret,
+				});
+					ModMan.NopAt(HRRDLoc + 3, 10);
+				*/
 				return new PatchResult(patch, PatchStatus.Disabled);
 			}),
 			new Patch("Enable fail for Relax and Autopilot", (patch, exp) =>
