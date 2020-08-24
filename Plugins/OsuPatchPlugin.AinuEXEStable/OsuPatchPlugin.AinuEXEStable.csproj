@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{7fe3a288-e42a-494b-a6bc-dfb0f1c82375}</ProjectGuid>
+    <ProjectGuid>{8087E94B-57BA-4048-A5D7-7893F14FDFBE}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>OsuPatchPlugin.AinuEXEStable</RootNamespace>
     <AssemblyName>OsuPatchPlugin.AinuEXEStable</AssemblyName>
