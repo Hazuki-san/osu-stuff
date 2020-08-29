@@ -2,9 +2,6 @@
 using dnlib.DotNet.Emit;
 using System;
 
-using OpCodes = dnlib.DotNet.Emit.OpCodes;
-
-
 namespace osu_patch
 {
 	static class LocalPatches
@@ -111,16 +108,102 @@ namespace osu_patch
 			}),
 			new Patch("Connect to server patch", (patch, exp) =>
 			{
-				// Patch pWebRequest to my server
+				// Method 01
+				// Patch set_Url to my server (most likely to get laggier?)
+				// osu.ppy.sh -> ainu.pw
+				var setURL = exp["osu_common.Helpers.pWebRequest"]["set_Url"].Editor;
+				var setURLLoc = setURL.Locate(new[]
+				{
+					OpCodes.Ldarg_1,
+					null,
+					null,
+					OpCodes.Callvirt,
+					OpCodes.Brtrue_S,
+					null,
+					null,
+					OpCodes.Ldarg_1,
+					null,
+					null,
+					OpCodes.Ldsfld,
+					OpCodes.Callvirt,
+					OpCodes.Call,
+					OpCodes.Starg_S,
+				});
+				setURL.LocateAndRemove(new[]
+				{
+					OpCodes.Ldarg_1,
+					null,
+					null,
+					OpCodes.Callvirt,
+					OpCodes.Brtrue_S,
+					null,
+					null,
+					OpCodes.Ldarg_1,
+					null,
+					null,
+					OpCodes.Ldsfld,
+					OpCodes.Callvirt,
+					OpCodes.Call,
+					OpCodes.Starg_S,
+				});
+
+				// The code below got help from xxCherry!
+				// Thank you so much for helping me! :D
+				var importer = new Importer(exp.Module);
+				var startswith = exp.Module.CreateMethodRef(false, typeof(String), "StartsWith", typeof(bool), typeof(string));
+				var contains = exp.Module.CreateMethodRef(false, typeof(String), "Contains", typeof(bool), typeof(string));
+				var replace = exp.Module.CreateMethodRef(false, typeof(String), "Replace", typeof(string),  typeof(string), typeof(string));
+				var concat = exp.Module.CreateMethodRef(true, typeof(String), "Concat", typeof(string),  typeof(string), typeof(string));
+				var parameter = setURL.Parent.Method.Parameters[1];
+				var instructions = new[] {
+					Instruction.Create(OpCodes.Ldarg_1),
+					Instruction.Create(OpCodes.Ldstr, "ppy.sh"),
+					Instruction.Create(OpCodes.Callvirt, contains),
+					Instruction.Create(OpCodes.Nop), //Brfalse 15
+					Instruction.Create(OpCodes.Ldsfld, importer.Import(typeof(string).GetField("Empty"))),
+					Instruction.Create(OpCodes.Ldarg_1),
+					Instruction.Create(OpCodes.Ldstr, "osu.ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "ainu.pw"),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Ldstr, "ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "ainu.pw"),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Call, concat),
+					Instruction.Create(OpCodes.Starg_S, parameter),
+					Instruction.Create(OpCodes.Nop), //Br.S 26
+					Instruction.Create(OpCodes.Ldarg_1),
+					Instruction.Create(OpCodes.Ldstr, "https://"),
+					Instruction.Create(OpCodes.Callvirt, startswith),
+					Instruction.Create(OpCodes.Nop), //Brtrue.S 26
+					Instruction.Create(OpCodes.Ldstr, "https://"),
+					Instruction.Create(OpCodes.Ldarg_1),
+					Instruction.Create(OpCodes.Ldstr, "http://"),
+					Instruction.Create(OpCodes.Ldsfld, importer.Import(typeof(string).GetField("Empty"))),
+					Instruction.Create(OpCodes.Callvirt, replace),
+					Instruction.Create(OpCodes.Call, concat),
+					Instruction.Create(OpCodes.Starg_S, parameter),
+					Instruction.Create(OpCodes.Ldarg_0),
+				};
+				instructions[3] = Instruction.Create(OpCodes.Brfalse_S, instructions[15]);
+				instructions[14] = Instruction.Create(OpCodes.Br_S, instructions[26]);
+				instructions[18] = Instruction.Create(OpCodes.Brfalse_S, instructions[26]);
+				setURL.RemoveAt(setURLLoc);
+				setURL.Insert(instructions);
+
+				/*
+				// Method 02
+				// Patch pWebRequest to my server (patch pWebRequest hardcoded connection.)
 				// osu.ppy.sh -> ainu.pw
 				var pWebReq = exp["osu_common.Helpers.pWebRequest"].FindMethodRaw(".ctor").Editor;
 				var pWebLoc = pWebReq.Locate(new[]
 				{
 					OpCodes.Ldarg_0,
 					OpCodes.Call,
+					OpCodes.Ldarg_0
 				});
 				// The code below got help from xxCherry!
 				// Thank you so much for helping me! :D
+				var importer = new Importer(exp.Module);
 				var contains = exp.Module.CreateMethodRef(false, typeof(String), "Contains", typeof(bool), typeof(string));
 				var replace = exp.Module.CreateMethodRef(false, typeof(String), "Replace", typeof(string),  typeof(string), typeof(string));
 				var concat = exp.Module.CreateMethodRef(true, typeof(String), "Concat", typeof(string),  typeof(string), typeof(string));
@@ -130,34 +213,30 @@ namespace osu_patch
 					Instruction.Create(OpCodes.Ldstr, "ppy.sh"),
 					Instruction.Create(OpCodes.Callvirt, contains),
 					Instruction.Create(OpCodes.Nop),
-					Instruction.Create(OpCodes.Ldstr, ""),
+					Instruction.Create(OpCodes.Ldsfld, importer.Import(typeof(string).GetField("Empty"))),
 					Instruction.Create(OpCodes.Ldarg_1),
 					Instruction.Create(OpCodes.Ldstr, "osu.ppy.sh"),
 					Instruction.Create(OpCodes.Ldstr, "ainu.pw"),
 					Instruction.Create(OpCodes.Callvirt, replace),
-					Instruction.Create(OpCodes.Ldstr, "c4.ppy.sh"),
-					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
-					Instruction.Create(OpCodes.Callvirt, replace),
-					Instruction.Create(OpCodes.Ldstr, "c5.ppy.sh"),
-					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
-					Instruction.Create(OpCodes.Callvirt, replace),
-					Instruction.Create(OpCodes.Ldstr, "c6.ppy.sh"),
-					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
-					Instruction.Create(OpCodes.Callvirt, replace),
-					Instruction.Create(OpCodes.Ldstr, "ce.ppy.sh"),
-					Instruction.Create(OpCodes.Ldstr, "c.ainu.pw"),
+					Instruction.Create(OpCodes.Ldstr, "ppy.sh"),
+					Instruction.Create(OpCodes.Ldstr, "ainu.pw"),
 					Instruction.Create(OpCodes.Callvirt, replace),
 					Instruction.Create(OpCodes.Call, concat),
 					Instruction.Create(OpCodes.Starg_S, parameter),
-					Instruction.Create(OpCodes.Nop),
-					Instruction.Create(OpCodes.Nop),
-					Instruction.Create(OpCodes.Nop),
+					Instruction.Create(OpCodes.Ldarg_0),
 				};
 
-				instructions[3] = Instruction.Create(OpCodes.Brfalse, instructions[23]);
+				instructions[3] = Instruction.Create(OpCodes.Brfalse_S, instructions[14]);
+				pWebReq.RemoveAt(pWebLoc + 2, 1);
 				pWebReq.InsertAt(pWebLoc + 2, instructions);
+				pWebReq.SimplifyBranches();
+				pWebReq.OptimizeBranches();
+				*/
 
-				// Bancho Patching not working atm
+				// Method 03
+				// Patch bancho server with hardcoding pWebRequest patching (less lag)
+				// c[4-6].ppy.sh -> c.ainu.pw
+				// osu.ppy.sh -> ainu.pw
 				/*
 				var BanchoServerList = exp["osu.Online.BanchoClient"].FindMethod(".cctor").Editor;
 				var BanchoServerLoc = pWebReq.Locate(new[]
@@ -187,7 +266,7 @@ namespace osu_patch
 				*/
 				return new PatchResult(patch, PatchStatus.Success);
 			}),
-			new Patch("Disable osu! update", (patch, exp) =>
+			new Patch("Disable osu! update (Stable method)", (patch, exp) =>
 			{
 				exp["osu.GameBase"]["CheckForUpdates"].Editor.LocateAndNop(new[]{
 					OpCodes.Ldarg_0,
@@ -204,9 +283,9 @@ namespace osu_patch
 					OpCodes.Bge_Un_S,
 					//OpCodes.Ret,
 				});
-				exp["osu.GameBase"]["CheckForUpdates"].Editor.LocateAndNop(new[]{OpCodes.Ldsfld,OpCodes.Brfalse_S});
 				return new PatchResult(patch, PatchStatus.Success);
 			}),
+			new Patch("Disable osu! update (CuttingEdge method)", (patch, exp) => { exp["osu.GameBase"]["CheckForUpdates"].Editor.LocateAndNop(new[]{OpCodes.Ldsfld,OpCodes.Brfalse_S}); return new PatchResult(patch, PatchStatus.Success);}),
 			new Patch("Local offset change while paused", (patch, exp) =>
 			{
 				// literally first 10 instructions
