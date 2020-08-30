@@ -186,7 +186,7 @@ namespace osu_patch
 				};
 				instructions[3] = Instruction.Create(OpCodes.Brfalse_S, instructions[15]);
 				instructions[14] = Instruction.Create(OpCodes.Br_S, instructions[26]);
-				instructions[18] = Instruction.Create(OpCodes.Brfalse_S, instructions[26]);
+				instructions[18] = Instruction.Create(OpCodes.Brtrue_S, instructions[26]);
 				setURL.RemoveAt(setURLLoc);
 				setURL.Insert(instructions);
 
